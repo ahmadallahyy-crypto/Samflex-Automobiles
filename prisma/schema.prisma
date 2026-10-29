@@ -1,0 +1,167 @@
+// Optional: connect PostgreSQL later for production admin + orders
+// For the demo storefront, data lives in lib/vehicles-data.ts
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Condition {
+  BRAND_NEW
+  FOREIGN_USED
+  NIGERIAN_USED
+}
+
+enum BodyType {
+  SUV
+  SEDAN
+  COUPE
+  PICKUP
+  HATCHBACK
+}
+
+enum Transmission {
+  AUTOMATIC
+  MANUAL
+}
+
+enum Fuel {
+  PETROL
+  DIESEL
+  HYBRID
+  ELECTRIC
+}
+
+enum Availability {
+  AVAILABLE
+  RESERVED
+  SOLD
+}
+
+enum OrderStatus {
+  PENDING
+  AWAITING_INSPECTION
+  PENDING_CONFIRMATION
+  PAID
+  RESERVED
+  CANCELLED
+  COMPLETED
+}
+
+enum PaymentMethod {
+  PAY_ON_INSPECTION
+  BANK_TRANSFER
+  CARD_DEMO
+  PAYSTACK
+  FLUTTERWAVE
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  passwordHash String
+  role         String   @default("ADMIN")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Vehicle {
+  id           String         @id @default(cuid())
+  slug         String         @unique
+  make         String
+  model        String
+  trim         String
+  year         Int
+  condition    Condition
+  bodyType     BodyType
+  price        Int
+  mileage      Int
+  transmission Transmission
+  fuel         Fuel
+  colour       String
+  availability Availability   @default(AVAILABLE)
+  featured     Boolean        @default(false)
+  description  String
+  features     String[]
+  locationNote String?
+  images       VehicleImage[]
+  enquiries    Enquiry[]
+  orderItems   OrderItem[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@index([make, bodyType, condition, availability])
+  @@index([price, year])
+}
+
+model VehicleImage {
+  id        String   @id @default(cuid())
+  vehicleId String
+  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  url       String
+  alt       String?
+  sortOrder Int      @default(0)
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([vehicleId])
+}
+
+model Enquiry {
+  id              String   @id @default(cuid())
+  vehicleId       String?
+  vehicle         Vehicle? @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  customerName    String
+  phone           String
+  email           String?
+  vehicleInterest String?
+  topic           String
+  message         String?
+  status          String   @default("NEW")
+  source          String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([status, createdAt])
+}
+
+model Order {
+  id            String        @id @default(cuid())
+  orderNumber   String        @unique
+  customerName  String
+  phone         String
+  email         String?
+  state         String?
+  city          String?
+  fulfilment    String
+  paymentMethod PaymentMethod
+  status        OrderStatus   @default(PENDING)
+  totalAmount   Int
+  notes         String?
+  items         OrderItem[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  vehicleId String
+  vehicle   Vehicle @relation(fields: [vehicleId], references: [id])
+  title     String
+  price     Int
+  image     String?
+}
+
+model SiteSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}
